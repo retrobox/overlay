@@ -1,26 +1,48 @@
 const childProcess = require('child_process')
 const io = require('socket.io-client')
+const fs = require('fs')
 
 module.exports = class Overlay {
-    constructor(socketUrl, consoleId) {
+    constructor(socketUrl, consoleId, consoleToken) {
         this.ping = "pong"
+        this.consoleId = consoleId
+        this.consoleToken = consoleToken
+        this.initConfigFile()
+        console.log("> registered as console: \"" + this.consoleId + "\", with token: \"" + this.consoleToken + "\"")
         this.socket = io(socketUrl, {
             transportOptions: {
                 polling: {
                     extraHeaders: {
                         'x-client-type': 'console',
-                        'x-console-id': consoleId
+                        'x-console-id': this.consoleId,
+                        'x-console-token': this.consoleToken
                     }
                 }
             }
         });
     }
-    init () {
+    connect () {
         this.socket.on('connect', () => {
-            console.log('Connected with websocket server')
+            console.log('> connected with websocket server')
             this.socket.on('get-status', (callback) => this.getStatus(callback))
-            this.socket.on('ping', (callback) => this.respondPing(callback))
+            this.socket.on('ping-check', (callback) => this.respondPing(callback))
         });
+        this.socket.on('disconnect', () => {
+            console.log('> disconnected from websocket server')
+        })
+    }
+    initConfigFile () {
+        let overlayConfigLocation = "/boot/overlay.json"
+        if (fs.existsSync(overlayConfigLocation)) {
+            let config = fs.readFileSync(overlayConfigLocation)
+            config = JSON.parse(config)
+            if (config.token !== undefined) {
+                this.consoleToken = config.token
+            }
+            if (config.id !== undefined) {
+                this.consoleId = config.id
+            }
+        }
     }
     respondPing (callback) {
         return callback({isAlive: true})
