@@ -43,6 +43,8 @@ module.exports = class Overlay {
     }
     getTemp () {
         return new Promise((resolve, reject) => {
+            // cat /sys/class/thermal/thermal_zone0/temp
+
             childProcess.exec('vcgencmd measure_temp', (err, stdout, stderr) => {
                 if (err && stderr != '') {
                     return reject()
@@ -51,4 +53,11 @@ module.exports = class Overlay {
             })
         })
     }
+    getDiskSpace () {
+        // df -h /
+        return new Promise((resolve, reject) => {
+
+        })
+    }
 }
+/// TYPE SCRIPT ?
