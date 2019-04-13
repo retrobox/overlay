@@ -19,7 +19,11 @@ module.exports = class Overlay {
         this.socket.on('connect', () => {
             console.log('Connected with websocket server')
             this.socket.on('get-status', (callback) => this.getStatus(callback))
+            this.socket.on('ping', (callback) => this.respondPing(callback))
         });
+    }
+    respondPing (callback) {
+        return callback({isAlive: true})
     }
     async getStatus (callback) {
         let status = {
