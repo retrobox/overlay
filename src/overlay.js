@@ -7,8 +7,11 @@ module.exports = class Overlay {
         this.ping = "pong"
         this.consoleId = consoleId
         this.consoleToken = consoleToken
-        this.initConfigFile()
-        console.log("> registered as console: \"" + this.consoleId + "\", with token: \"" + this.consoleToken + "\"")
+        if (this.consoleId === null || this.consoleToken === null) {
+            this.initConfigFile()
+        }
+        console.log(`> Registered as console: ${this.consoleId}, with token: ${this.consoleToken}`)
+        console.log(`> Using websocket url: ${socketUrl}`)
         this.socket = io(socketUrl, {
             transportOptions: {
                 polling: {
@@ -23,27 +26,35 @@ module.exports = class Overlay {
     }
     connect () {
         this.socket.on('connect', () => {
-            console.log('> connected with websocket server')
+            console.log('> Connected with websocket server')
             this.socket.on('get-status', (callback) => this.getStatus(callback))
             this.socket.on('shutdown', (callback) => this.shutdown(callback))
             this.socket.on('reboot', (callback) => this.reboot(callback))
             this.socket.on('ping-check', (callback) => this.respondPing(callback))
         });
         this.socket.on('disconnect', () => {
-            console.log('> disconnected from websocket server')
+            console.log('> Disconnected from websocket server')
         })
     }
     initConfigFile () {
         let overlayConfigLocation = "/boot/overlay.json"
         if (fs.existsSync(overlayConfigLocation)) {
             let config = fs.readFileSync(overlayConfigLocation)
-            config = JSON.parse(config)
+            try {
+                config = JSON.parse(config)
+            } catch(err) {
+                console.log("> ERR: Invalid overlay config file")
+                process.exit()
+            }
             if (config.token !== undefined) {
                 this.consoleToken = config.token
             }
             if (config.id !== undefined) {
                 this.consoleId = config.id
             }
+        } else {
+            console.log(`> ERR: No overlay config file found at ${overlayConfigLocation}`)
+            process.exit()
         }
     }
     respondPing (callback) {
@@ -53,7 +64,7 @@ module.exports = class Overlay {
         let status = {
             cpu_temp: await this.getCpuTemp(),
             gpu_temp: await this.getGpuTemp(),
-            uptime: await this.getUptime(),
+            up_time: await this.getUpTime(),
             disk: await this.getDiskSpace(),
             wifi: await this.getWifiSsid(),
             ip: await this.getIpAddress(),
@@ -95,7 +106,7 @@ module.exports = class Overlay {
                     partition: raw[0],
                     size: raw[1],
                     used: raw[2],
-                    availaible: raw[3],
+                    free: raw[3],
                     usage: raw[4],
                     mountPoint: raw[5]
                 }
@@ -103,7 +114,7 @@ module.exports = class Overlay {
             })
         })
     }
-    getUptime () {
+    getUpTime () {
         return new Promise((resolve, reject) => {
             childProcess.exec('/usr/bin/cut -d. -f1 /proc/uptime', (err, stdout, stderr) => {
                 if (err || stderr != '') return reject()
