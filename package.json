@@ -5,7 +5,8 @@
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
-    "dev": "env NODE_ENV=development nodemon app.js"
+    "dev": "env NODE_ENV=development nodemon app.js",
+    "build": "pkg --targets node10-linux-armv6 --output build app.js"
   },
   "repository": {
     "type": "git",
@@ -26,5 +27,8 @@
   "dependencies": {
     "node-wifi": "^2.0.5",
     "socket.io": "^2.2.0"
+  },
+  "devDependencies": {
+    "pkg": "^4.4.0"
   }
 }
