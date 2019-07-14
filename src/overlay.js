@@ -151,23 +151,19 @@ module.exports = class Overlay {
         })
     }
     shutdown () {
-        return new Promise((resolve, reject) => {
-            childProcess.exec("poweroff", (err, stdout, stderr) => {
-                if (err || stderr != '') return reject()
-
-                return resolve({ack: true})
+        return new Promise(resolve => {
+            resolve({
+                ack: true
             })
+            childProcess.exec("poweroff")
         })
     }
     reboot () {
-        return new Promise((resolve, reject) => {
-            childProcess.exec("reboot", (err, stdout, stderr) => {
-                if (err || stderr != '') return reject()
-
-                return resolve({
-                    ack: true
-                })
+        return new Promise(resolve => {
+            resolve({
+                ack: true
             })
+            childProcess.exec("reboot")
         })
     }
 }
