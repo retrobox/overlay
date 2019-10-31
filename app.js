@@ -7,7 +7,7 @@ if (!(process.getuid && process.getuid() === 0)) {
     process.exit()
 }
 
-const Overlay = require('./src/overlay')
+const Overlay = require('./src/Overlay')
 const overlay = new Overlay(socketUrl, consoleId, consoleToken)
 
 overlay.connect()

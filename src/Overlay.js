@@ -1,6 +1,7 @@
 const childProcess = require('child_process')
 const io = require('socket.io-client')
 const fs = require('fs')
+const SshSession = require('./SshSession')
 
 module.exports = class Overlay {
     constructor(socketUrl, consoleId, consoleToken) {
@@ -24,19 +25,22 @@ module.exports = class Overlay {
             }
         });
     }
-    connect () {
+
+    connect() {
         this.socket.on('connect', () => {
             console.log('> Connected with websocket server')
             this.socket.on('get-status', (callback) => this.getStatus(callback))
             this.socket.on('shutdown', (callback) => this.shutdown(callback))
             this.socket.on('reboot', (callback) => this.reboot(callback))
+            this.socket.on('open-ssh-session', (callback) => this.openSshSession(callback))
             this.socket.on('ping-check', (callback) => this.respondPing(callback))
         });
         this.socket.on('disconnect', () => {
             console.log('> Disconnected from websocket server')
         })
     }
-    initConfigFile () {
+
+    initConfigFile() {
         let overlayConfigLocation = "/boot/overlay.json"
         if (fs.existsSync(overlayConfigLocation)) {
             let config = fs.readFileSync(overlayConfigLocation)
@@ -57,10 +61,12 @@ module.exports = class Overlay {
             process.exit()
         }
     }
-    respondPing (callback) {
+
+    respondPing(callback) {
         return callback({isAlive: true})
     }
-    async getStatus (callback) {
+
+    async getStatus(callback) {
         let status = {
             cpu_temp: await this.getCpuTemp(),
             gpu_temp: await this.getGpuTemp(),
@@ -73,7 +79,8 @@ module.exports = class Overlay {
         }
         return callback(status)
     }
-    getCpuTemp () {
+
+    getCpuTemp() {
         return new Promise((resolve, reject) => {
             childProcess.exec('cat /sys/class/thermal/thermal_zone0/temp', (err, stdout, stderr) => {
                 if (err || stderr != '') return reject()
@@ -81,7 +88,8 @@ module.exports = class Overlay {
             })
         })
     }
-    getGpuTemp () {
+
+    getGpuTemp() {
         return new Promise((resolve, reject) => {
             childProcess.exec('vcgencmd measure_temp', (err, stdout, stderr) => {
                 if (err || stderr != '') return reject()
@@ -89,7 +97,8 @@ module.exports = class Overlay {
             })
         })
     }
-    getWifiSsid () {    
+
+    getWifiSsid() {    
         return new Promise((resolve, reject) => {
             childProcess.exec('iwgetid -r', (err, stdout, stderr) => {
                 if (err || stderr != '') return reject()
@@ -97,7 +106,8 @@ module.exports = class Overlay {
             })
         })
     }
-    getDiskSpace () {
+
+    getDiskSpace() {
         return new Promise((resolve, reject) => {
             childProcess.exec('df -h /', (err, stdout, stderr) => {
                 if (err || stderr != '') return reject()
@@ -114,6 +124,7 @@ module.exports = class Overlay {
             })
         })
     }
+
     getUpTime () {
         return new Promise((resolve, reject) => {
             childProcess.exec('/usr/bin/cut -d. -f1 /proc/uptime', (err, stdout, stderr) => {
@@ -123,6 +134,7 @@ module.exports = class Overlay {
             })
         })
     }
+
     getIpAddress () {
         return new Promise((resolve, reject) => {
             childProcess.exec("ip route get 8.8.8.8 2>/dev/null | awk '{print $NF; exit}'", (err, stdout, stderr) => {
@@ -132,6 +144,7 @@ module.exports = class Overlay {
             })
         })
     }
+
     getFreeMemory () {
         return new Promise((resolve, reject) => {
             childProcess.exec("grep MemFree /proc/meminfo | awk {'print $2'}", (err, stdout, stderr) => {
@@ -141,6 +154,7 @@ module.exports = class Overlay {
             })
         })
     }
+
     getTotalMemory() {
         return new Promise((resolve, reject) => {
             childProcess.exec("grep MemTotal /proc/meminfo | awk {'print $2'}", (err, stdout, stderr) => {
@@ -150,20 +164,36 @@ module.exports = class Overlay {
             })
         })
     }
-    shutdown () {
-        return new Promise(resolve => {
-            resolve({
-                ack: true
+
+    async openSshSession(callback) {
+        console.log('> SSH: Open ssh session received!')
+        // launch installation process
+        let sshSession = new SshSession()
+        sshSession.installGotty().then(() => {
+            this.socket.emit('gotty-installed')
+            console.log('> SSH: Complete and successful installation of the gotty binary')
+            sshSession.openSession().then(url => {
+                console.log('> SSH: Complete and successful ssh session open')
+                this.socket.emit('ssh-opened', url)
             })
-            childProcess.exec("poweroff")
         })
+
+        callback({ ack: true })
+        //const SshSession = new (require('./SshSession'))()
+        //SshSession.installGotty()
     }
-    reboot () {
-        return new Promise(resolve => {
-            resolve({
-                ack: true
-            })
-            childProcess.exec("reboot")
-        })
+
+    async shutdown(callback) {
+        callback({ack: true})
+        setTimeout(() => {
+            childProcess.execSync('poweroff')
+        }, 200)
+    }
+
+    async reboot(callback) {
+        callback({ack: true})
+        setTimeout(() => {
+            childProcess.execSync('reboot')
+        }, 200)
     }
 }
