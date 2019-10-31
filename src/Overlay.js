@@ -42,6 +42,7 @@ module.exports = class Overlay {
 
     initConfigFile() {
         let overlayConfigLocation = "/boot/overlay.json"
+        console.log('> Using the config file located at ' + overlayConfigLocation)
         if (fs.existsSync(overlayConfigLocation)) {
             let config = fs.readFileSync(overlayConfigLocation)
             try {
