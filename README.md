@@ -1,5 +1,9 @@
 # Overlay
 
+## Dependencies
+
+- isof (`apt-get install lsof`)
+
 ## Commands
 
 Here is a list of some useful bash commands to get basic information from the system.
