@@ -1,13 +1,14 @@
 const childProcess = require('child_process')
 const io = require('socket.io-client')
 const fs = require('fs')
-const SshSession = require('./SshSession')
+const TerminalSession = require('./TerminalSession')
 
 module.exports = class Overlay {
     constructor(socketUrl, consoleId, consoleToken) {
         this.ping = "pong"
         this.consoleId = consoleId
         this.consoleToken = consoleToken
+        this.terminalSession = null
         if (this.consoleId === null || this.consoleToken === null) {
             this.initConfigFile()
         }
@@ -28,12 +29,15 @@ module.exports = class Overlay {
 
     connect() {
         this.socket.on('connect', () => {
-            console.log('> Connected with websocket server')
             this.socket.on('get-status', (callback) => this.getStatus(callback))
             this.socket.on('shutdown', (callback) => this.shutdown(callback))
             this.socket.on('reboot', (callback) => this.reboot(callback))
-            this.socket.on('open-ssh-session', (callback) => this.openSshSession(callback))
+            this.socket.on('open-terminal-session', (callback) => this.openTerminalSession(callback))
+            this.socket.on('terminal-input', (data) => this.terminalData(data))
+            this.socket.on('terminal-resize', (data) => this.terminalResize(data))
+            this.socket.on('close-terminal-session', () => this.closeTerminalSession())
             this.socket.on('ping-check', (callback) => this.respondPing(callback))
+            console.log('> Connected with websocket server')
         });
         this.socket.on('disconnect', () => {
             console.log('> Disconnected from websocket server')
@@ -166,22 +170,37 @@ module.exports = class Overlay {
         })
     }
 
-    async openSshSession(callback) {
-        console.log('> SSH: Open ssh session received!')
-        // launch installation process
-        let sshSession = new SshSession()
-        sshSession.installGotty().then(() => {
-            this.socket.emit('gotty-installed')
-            console.log('> SSH: Complete and successful installation of the gotty binary')
-            sshSession.openSession().then(url => {
-                console.log('> SSH: Complete and successful ssh session open')
-                this.socket.emit('ssh-opened', url)
-            })
-        })
+    async openTerminalSession(callback) {
+        console.log('> Terminal: Opening a terminal session...')
+        this.terminalSession = new TerminalSession(this.socket)
+        this.terminalSession.openSession()
 
         callback({ ack: true })
-        //const SshSession = new (require('./SshSession'))()
-        //SshSession.installGotty()
+    }
+
+    async terminalData(data) {
+        if (this.terminalSession !== null) {
+            this.terminalSession.write(data)
+        } else {
+            console.log('> ERR: Received terminal input, but no session is opened')
+        }
+    }
+
+    async terminalResize(data) {
+        if (this.terminalSession !== null) {
+            this.terminalSession.resize(data)
+        } else {
+            console.log('> ERR: Received terminal resize, but no session is opened')
+        }
+    }
+
+    async closeTerminalSession() {
+        if (this.terminalSession === null) {
+            console.log('> Terminal session is already closed')
+        } else {
+            this.terminalSession.close()
+            this.terminalSession = null
+        }
     }
 
     async shutdown(callback) {
