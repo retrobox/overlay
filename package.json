@@ -28,6 +28,7 @@
     "cross-port-killer": "^1.2.1",
     "dotenv": "^8.2.0",
     "localtunnel": "^2.0.0",
+    "node-pty": "^0.9.0",
     "node-pty-prebuilt": "^0.7.6",
     "node-wifi": "^2.0.5",
     "socket.io": "^2.2.0"
