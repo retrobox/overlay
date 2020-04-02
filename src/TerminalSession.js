@@ -11,7 +11,8 @@ module.exports = class TerminalSession {
     openSession() {
         return new Promise((resolve) => {
             if (this.pty !== null) {
-                this.pty.removeAllListeners(this.data)
+                this.pty.removeAllListeners('data')
+                this.pty.removeAllListeners('exit')
             }
 
             this.outputEnabled = true
@@ -30,6 +31,11 @@ module.exports = class TerminalSession {
                 } else {
                     this.outputEnabled = false
                 }
+            })
+
+            this.pty.on('exit', (exitCode, signal) => {
+                console.log('> Terminal: Process exited with code', exitCode, 'and signal', signal)
+                this.socket.emit('terminal-exit', {exitCode, signal})
             })
 
             resolve()
