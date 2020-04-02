@@ -16,7 +16,7 @@ module.exports = class TerminalSession {
 
             this.outputEnabled = true
 
-            this.pty = pty.spawn('bash', [], {
+            this.pty = pty.spawn('su', ['-', 'pi'], {
                 name: 'xterm-color',
                 cols: 80,
                 rows: 30,
