@@ -7,8 +7,18 @@ let consoleToken = process.env.CONSOLE_TOKEN !== undefined ? process.env.CONSOLE
 
 if (!(process.getuid && process.getuid() === 0)) {
     console.log('> ERR: not running as root user')
-    process.exit()
+    process.exit(1)
 }
+
+process
+  .on('unhandledRejection', (reason, p) => {
+    console.error(reason, 'Unhandled Rejection at Promise', p);
+    process.exit(1);
+  })
+  .on('uncaughtException', err => {
+    console.error(err, 'Uncaught Exception thrown');
+    process.exit(1);
+  });
 
 const Overlay = require('./src/Overlay')
 const overlay = new Overlay(socketUrl, consoleId, consoleToken)
