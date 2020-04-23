@@ -24,11 +24,24 @@ module.exports = class Overlay {
                     }
                 }
             }
-        });
+        })
+        this.socket.on('error', error => {
+            console.log('> ERR: socket error', error)
+        })
     }
 
     connect() {
         this.socket.on('connect', () => {
+            this.socket.off('get-status')
+            this.socket.off('shutdown')
+            this.socket.off('reboot')
+            this.socket.off('open-terminal-session')
+            this.socket.off('terminal-input')
+            this.socket.off('terminal-resize')
+            this.socket.off('close-terminal-session')
+            this.socket.off('ping-check')
+            this.socket.off('self-kill')
+
             this.socket.on('get-status', (callback) => this.getStatus(callback))
             this.socket.on('shutdown', (callback) => this.shutdown(callback))
             this.socket.on('reboot', (callback) => this.reboot(callback))
@@ -37,6 +50,7 @@ module.exports = class Overlay {
             this.socket.on('terminal-resize', (data) => this.terminalResize(data))
             this.socket.on('close-terminal-session', () => this.closeTerminalSession())
             this.socket.on('ping-check', (callback) => this.respondPing(callback))
+            this.socket.on('self-kill', (callback) => this.selfKill(callback))
             console.log('> Connected with websocket server')
         });
         this.socket.on('disconnect', () => {
@@ -172,10 +186,14 @@ module.exports = class Overlay {
 
     async openTerminalSession(callback) {
         console.log('> Terminal: Opening a terminal session...')
+        if (this.terminalSession !== null) {
+            // if a existing terminal session already exists, close the session
+            this.terminalSession.close()
+        }
         this.terminalSession = new TerminalSession(this.socket)
-        this.terminalSession.openSession()
-
-        callback({ ack: true })
+        this.terminalSession.openSession().then(() => {
+            callback({ ack: true })
+        })
     }
 
     async terminalData(data) {
@@ -214,6 +232,14 @@ module.exports = class Overlay {
         callback({ack: true})
         setTimeout(() => {
             childProcess.execSync('reboot')
+        }, 200)
+    }
+
+    async selfKill(callback) {
+        callback({ack: true})
+        console.log('> Received the order of auto killing my self :(')
+        setTimeout(() => {
+            process.exit()
         }, 200)
     }
 }

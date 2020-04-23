@@ -4,6 +4,13 @@
 
 - isof (`apt-get install lsof`)
 
+## Getting started
+
+- Copy the content of `.env.example` in a new `.env` file
+- Fill out SOCKET_URL, CONSOLE_ID and CONSOLE_TOKEN env variables
+- Start the overlay: `sudo node app.js` or `npm run dev` (with nodemon)
+- To get debug or logs with socket.io use the following command: `sudo env DEBUG=socket.io* npm run dev`
+
 ## Commands
 
 Here is a list of some useful bash commands to get basic information from the system.
